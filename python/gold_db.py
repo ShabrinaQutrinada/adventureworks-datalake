@@ -1,4 +1,5 @@
 import pandas as pd
+import psycopg2
 import os
 
 # Baca data dari silver layer
@@ -8,22 +9,47 @@ df = pd.read_parquet("datalake/silver/online_sales/sales_clean.parquet")
 dim_time = df[['orderdate', 'year', 'month', 'quarter', 'day']].drop_duplicates()
 dim_time = dim_time.reset_index(drop=True)
 dim_time['time_id'] = dim_time.index + 1
-# DIM_PRODUCT
-dim_product = df[['productid']].drop_duplicates()
-dim_product = dim_product.reset_index(drop=True)
-dim_product['product_id'] = dim_product.index + 1
+
+# DIM_PRODUCT - ambil dari database (lengkap dengan nama & kategori)
+conn = psycopg2.connect(
+    host="localhost",
+    database="adventureworks_local",
+    user="postgres",
+    password="shabrinaABD",
+    port="5432"
+)
+dim_product = pd.read_sql("""
+    SELECT 
+        p.productid,
+        p.name AS product_name,
+        p.productnumber,
+        p.color,
+        p.listprice,
+        p.standardcost,
+        ps.name AS subcategory,
+        pc.name AS category
+    FROM production.product p
+    LEFT JOIN production.productsubcategory ps 
+        ON p.productsubcategoryid = ps.productsubcategoryid
+    LEFT JOIN production.productcategory pc 
+        ON ps.productcategoryid = pc.productcategoryid
+""", conn)
+conn.close()
+
 # DIM_CUSTOMER
 dim_customer = df[['customerid']].drop_duplicates()
 dim_customer = dim_customer.reset_index(drop=True)
 dim_customer['customer_id'] = dim_customer.index + 1
+
 # FACT_ONLINESALES
 fact = df.merge(dim_time[['orderdate', 'time_id']], on='orderdate')
-fact = fact.merge(dim_product[['productid', 'product_id']], on='productid')
+fact = fact.merge(dim_product[['productid']], on='productid')
 fact = fact.merge(dim_customer[['customerid', 'customer_id']], on='customerid')
 
-fact_online_sales = fact[['salesorderid', 'time_id', 'product_id', 
-                           'customer_id', 'orderqty', 'unitprice', 
+fact_online_sales = fact[['salesorderid', 'time_id', 'productid',
+                           'customer_id', 'orderqty', 'unitprice',
                            'totaldue', 'linetotal']]
+
 # Simpan ke gold layer
 os.makedirs("datalake/gold/online_sales", exist_ok=True)
 dim_time.to_parquet("datalake/gold/online_sales/dim_time.parquet", index=False)
