@@ -146,16 +146,28 @@ def load_sales():
     dim_product  = pd.read_parquet(os.path.join(SALES_PATH, 'dim_product.parquet'))
     dim_time     = pd.read_parquet(os.path.join(SALES_PATH, 'dim_time.parquet'))
     dim_customer = pd.read_parquet(os.path.join(SALES_PATH, 'dim_customer.parquet'))
-    df = fact.merge(dim_time[['time_id','year','month','quarter']], on='time_id')
-    df = df.merge(dim_product[['productid','product_name','category','listprice']], on='productid')
+
+    df = fact.merge(
+        dim_time[['time_id', 'year', 'month', 'quarter']],
+        on='time_id'
+    )
+
+    df = df.merge(
+        dim_product[['product_key', 'product_name', 'category', 'listprice']],
+        on='product_key'
+    )
+
     return df
+
 
 @st.cache_data
 def load_reviews():
     fact     = pd.read_parquet(os.path.join(REVIEWS_PATH, 'fact_review.parquet'))
     dim_sent = pd.read_parquet(os.path.join(REVIEWS_PATH, 'dim_sentiment.parquet'))
+
     df = fact.merge(dim_sent, on='sentiment_id')
     df['tanggal_review'] = pd.to_datetime(df['tanggal_review'])
+
     return df
 
 try:
