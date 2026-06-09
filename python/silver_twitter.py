@@ -7,9 +7,9 @@ print("  SILVER LAYER — Cleaning + Sentiment")
 print("=" * 50)
 
 df = pd.read_csv("datalake/bronze/reviews/review_raw.csv")
-print(f"\n✅ Bronze data berhasil dibaca: {df.shape[0]} baris")
+print(f"\n Bronze data berhasil dibaca: {df.shape[0]} baris")
 
-print("\n🧹 Proses Cleaning...")
+print("\n Proses Cleaning...")
 
 # Hapus baris yang kolom ulasan atau bintang kosong
 sebelum = len(df)
@@ -31,11 +31,11 @@ def clean_text(text):
     return text.strip()
 
 df["ulasan_bersih"] = df["ulasan"].apply(clean_text)
-print(f"   Cleaning teks     : selesai ✅")
+print(f"   Cleaning teks     : selesai ")
 print(f"   Total data bersih : {len(df)} baris")
 
 
-print("\n🔍 Proses Sentiment Analysis...")
+print("\n Proses Sentiment Analysis...")
 
 KATA_POSITIF = [
     "bagus", "baik", "mantap", "puas", "memuaskan", "sempurna",
@@ -91,13 +91,13 @@ print(f"   Positive : {dist.get('Positive', 0)} ulasan")
 print(f"   Neutral  : {dist.get('Neutral', 0)} ulasan")
 print(f"   Negative : {dist.get('Negative', 0)} ulasan")
 
-print(f"\n📋 Contoh hasil silver:")
+print(f"\n Contoh hasil silver:")
 print(df[["bintang", "ulasan_bersih", "sentiment"]].sample(5, random_state=42).to_string(index=False))
 
 os.makedirs("datalake/silver/reviews", exist_ok=True)
 
 df.to_csv("datalake/silver/reviews/review_clean.csv", index=False)
 
-print(f"\n✅ Silver berhasil disimpan!")
+print(f"\n Silver berhasil disimpan!")
 print(f"   → datalake/silver/reviews/review_clean.csv")
 print("=" * 50)

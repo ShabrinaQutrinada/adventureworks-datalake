@@ -7,13 +7,13 @@ print("  GOLD LAYER — Build Data Warehouse Tables")
 print("=" * 50)
 
 df = pd.read_csv("datalake/silver/reviews/review_clean.csv")
-print(f"\n✅ Silver data berhasil dibaca: {df.shape[0]} baris")
+print(f"\n Silver data berhasil dibaca: {df.shape[0]} baris")
 
 df["tanggal_review"] = pd.to_datetime(df["tanggal_review"])
 df["bulan"]  = df["tanggal_review"].dt.month
 df["tahun"]  = df["tanggal_review"].dt.year
 
-print("\n📦 Membuat Dim_Sentiment...")
+print("\n Membuat Dim_Sentiment...")
 
 dim_sentiment = pd.DataFrame({
     "sentiment_id":    [1, 2, 3],
@@ -29,7 +29,7 @@ print(dim_sentiment.to_string(index=False))
 mapping_sentiment = {"Positive": 1, "Neutral": 2, "Negative": 3}
 df["sentiment_id"] = df["sentiment"].map(mapping_sentiment)
 
-print("\n📦 Membuat Fact_Review...")
+print("\n Membuat Fact_Review...")
 
 fact_review = df[[
     "id_review",
@@ -48,7 +48,7 @@ print(f"   Kolom                   : {fact_review.columns.tolist()}")
 
 # Ringkasan
 merged = fact_review.merge(dim_sentiment, on="sentiment_id")
-print(f"\n📊 Ringkasan Analitik Gold Layer:")
+print(f"\n Ringkasan Analitik Gold Layer:")
 print(f"   Produk berbeda       : {fact_review['nama_produk'].nunique()}")
 print(f"   Rata-rata bintang    : {fact_review['bintang'].mean():.2f}")
 print(f"\n   Sentiment breakdown:")
@@ -69,7 +69,7 @@ fact_review.to_parquet(
     index=False
 )
 
-print(f"\n✅ Gold berhasil disimpan!")
+print(f"\n Gold berhasil disimpan!")
 print(f"   → datalake/gold/reviews/dim_sentiment.parquet")
 print(f"   → datalake/gold/reviews/fact_review.parquet")
 print("=" * 50)

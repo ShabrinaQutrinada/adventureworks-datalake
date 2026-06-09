@@ -16,9 +16,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 
-# ──────────────────────────────────────────────────────────────
-# PAGE CONFIG
-# ──────────────────────────────────────────────────────────────
+
 st.set_page_config(
     page_title="BI Dashboard",
     page_icon="📊",
@@ -26,16 +24,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ──────────────────────────────────────────────────────────────
-# PATH SETUP
-# ──────────────────────────────────────────────────────────────
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'datalake', 'gold')
 SALES_PATH   = os.path.join(BASE, 'online_sales')
 REVIEWS_PATH = os.path.join(BASE, 'reviews')
 
-# ──────────────────────────────────────────────────────────────
-# GLOBAL CSS
-# ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -79,9 +71,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 </style>
 """, unsafe_allow_html=True)
 
-# ──────────────────────────────────────────────────────────────
-# WARNA
-# ──────────────────────────────────────────────────────────────
+
 PALETTE = [
     '#1d4ed8','#2563eb','#3b82f6','#0369a1',
     '#0ea5e9','#1e40af','#60a5fa','#0284c7',
@@ -96,14 +86,13 @@ SENTIMENT_COLORS = {
     'Negative': '#dc2626',
 }
 
-# BASE_LAYOUT — font gelap agar terbaca di background terang
 BASE_LAYOUT = dict(
     plot_bgcolor='rgba(0,0,0,0)',
     paper_bgcolor='rgba(0,0,0,0)',
     font=dict(
         family='Inter, sans-serif',
         size=12,
-        color='#1e3a5f',      # ← navy gelap, kontras di background putih/biru muda
+        color='#1e3a5f',      
     ),
     margin=dict(t=10, b=10, l=10, r=10),
     hoverlabel=dict(bgcolor='#0f1c3f', font_color='#e2ecff', font_size=12),
@@ -123,16 +112,9 @@ BULAN_ID = {
     5:'Mei',     6:'Juni',     7:'Juli',      8:'Agustus',
     9:'September',10:'Oktober',11:'November',12:'Desember',
 }
-
-# ──────────────────────────────────────────────────────────────
-# HELPER
-# ──────────────────────────────────────────────────────────────
 def render_chart(fig, title='', height=320):
-    """Terapkan layout standar lalu render chart."""
-    # Terapkan base layout
     fig.update_layout(**BASE_LAYOUT, height=height)
 
-    # Paksa semua axis font gelap (override bawaan plotly)
     fig.update_xaxes(
         tickfont=dict(color='#1e3a5f', size=11),
         title_font=dict(color='#1e3a5f', size=12),
@@ -141,8 +123,6 @@ def render_chart(fig, title='', height=320):
         tickfont=dict(color='#1e3a5f', size=11),
         title_font=dict(color='#1e3a5f', size=12),
     )
-
-    # Paksa label teks di atas bar/pie jadi gelap
     fig.update_traces(
         textfont_color='#1e3a5f',
         selector=dict(type='bar'),
@@ -160,10 +140,6 @@ def render_chart(fig, title='', height=320):
 def section_header(label):
     st.markdown(f'<p class="section-label">{label}</p>', unsafe_allow_html=True)
 
-
-# ──────────────────────────────────────────────────────────────
-# DATA LOADING
-# ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_sales():
     fact         = pd.read_parquet(os.path.join(SALES_PATH, 'fact_online_sales.parquet'))
@@ -200,9 +176,6 @@ except Exception as e:
     REVIEW_OK = False
     _review_err = str(e)
 
-# ──────────────────────────────────────────────────────────────
-# SIDEBAR
-# ──────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title('BI Dashboard')
     st.markdown('---')
@@ -254,9 +227,7 @@ with st.sidebar:
     else:
         df_r = df_review_raw
 
-# ──────────────────────────────────────────────────────────────
-# PAGE HEADER
-# ──────────────────────────────────────────────────────────────
+
 SUBTITLE = {
     'Overview':            'Ringkasan gabungan performa penjualan dan analisis sentimen pelanggan.',
     'Sales Analytics':     'Analisis transaksi penjualan online AdventureWorks — revenue, produk, dan pelanggan.',
@@ -270,10 +241,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 st.divider()
 
-
-# ══════════════════════════════════════════════════════════════
-# MODUL SALES
-# ══════════════════════════════════════════════════════════════
 def render_sales(df, compact=False):
     if not SALES_OK:
         st.error(f'Gagal memuat data sales.\n\n**Path:** `{SALES_PATH}`\n\n**Error:** {_sales_err}')
@@ -420,10 +387,6 @@ def render_sales(df, compact=False):
     st.download_button('Download Data Sales (CSV)', data=csv,
                        file_name='sales_filtered.csv', mime='text/csv')
 
-
-# ══════════════════════════════════════════════════════════════
-# MODUL SENTIMENT
-# ══════════════════════════════════════════════════════════════
 def render_sentiment(df, compact=False):
     if not REVIEW_OK:
         st.error(f'Gagal memuat data review.\n\n**Path:** `{REVIEWS_PATH}`\n\n**Error:** {_review_err}')
@@ -610,10 +573,6 @@ def render_sentiment(df, compact=False):
     st.download_button('Download Data Review (CSV)', data=csv,
                        file_name='review_filtered.csv', mime='text/csv')
 
-
-# ══════════════════════════════════════════════════════════════
-# OVERVIEW
-# ══════════════════════════════════════════════════════════════
 def render_overview():
     section_header('Ringkasan Bisnis')
     cols = st.columns(6)
