@@ -36,3 +36,5 @@ os.makedirs("datalake/bronze/online_sales", exist_ok=True)
 df.to_parquet("datalake/bronze/online_sales/sales_raw.parquet", index=False)
 
 print(f"Berhasil extract {len(df)} baris data online sales!")
+
+
