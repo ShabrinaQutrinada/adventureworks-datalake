@@ -1,0 +1,10 @@
+{
+  "layer": "gold",
+  "loaded_at": "2026-06-11T12:14:22.902044",
+  "source": "AdventureWorks (OnlineOrderFlag=0) via Excel",
+  "dim_salesperson_rows": 17,
+  "fact_storesales_rows": 60919,
+  "revenue_total": 80487704.1904,
+  "db_loaded": false,
+  "gold_path": "C:\\Users\\ASUS\\Z\\IdeaProjects\\adventureworks-datalake\\datalake\\gold\\store_sales"
+}

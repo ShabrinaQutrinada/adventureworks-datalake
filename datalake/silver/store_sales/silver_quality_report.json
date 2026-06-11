@@ -1,0 +1,14 @@
+{
+  "layer": "silver",
+  "cleaned_at": "2026-06-11T12:14:17.859690",
+  "rows_in": 60919,
+  "rows_out": 60919,
+  "rows_removed": 0,
+  "issues_fixed": [],
+  "null_remaining": {},
+  "date_range": {
+    "order_min": "2022-05-30 00:00:00",
+    "order_max": "2025-04-30 00:00:00"
+  },
+  "revenue_total": 80487704.1904
+}

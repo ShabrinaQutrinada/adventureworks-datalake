@@ -27,6 +27,7 @@ st.set_page_config(
 BASE         = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'datalake', 'gold')
 SALES_PATH   = os.path.join(BASE, 'online_sales')
 REVIEWS_PATH = os.path.join(BASE, 'reviews')
+STORE_PATH   = os.path.join(BASE, 'store_sales')   # ← ZONA: Store Sales
 
 st.markdown("""
 <style>
@@ -92,7 +93,7 @@ BASE_LAYOUT = dict(
     font=dict(
         family='Inter, sans-serif',
         size=12,
-        color='#1e3a5f',      
+        color='#1e3a5f',
     ),
     margin=dict(t=10, b=10, l=10, r=10),
     hoverlabel=dict(bgcolor='#0f1c3f', font_color='#e2ecff', font_size=12),
@@ -188,13 +189,38 @@ except Exception as e:
     REVIEW_OK = False
     _review_err = str(e)
 
+# ── ZONA: Load Store Sales ────────────────────────────────────
+@st.cache_data
+def load_store():
+    fact   = pd.read_parquet(os.path.join(STORE_PATH, 'fact_storesales.parquet'))
+    dim_sp = pd.read_parquet(os.path.join(STORE_PATH, 'dim_salesperson.parquet'))
+    df = fact.merge(dim_sp[['SK_Salesperson','TerritoryName','TerritoryGroup','TerritoryCountry']],
+                    on='SK_Salesperson', how='left')
+    df['OrderDate']    = pd.to_datetime(df['OrderDate'],   errors='coerce')
+    df['OrderYear']    = pd.to_numeric(df['OrderYear'],    errors='coerce').astype('Int64')
+    df['OrderMonth']   = pd.to_numeric(df['OrderMonth'],   errors='coerce').astype('Int64')
+    df['OrderQuarter'] = pd.to_numeric(df['OrderQuarter'], errors='coerce').fillna(0).astype(int)
+    df['RevenueNet']   = pd.to_numeric(df['RevenueNet'],   errors='coerce').fillna(0)
+    df['OrderQty']     = pd.to_numeric(df['OrderQty'],     errors='coerce').fillna(0)
+    df['ListPrice']    = pd.to_numeric(df['ListPrice'],    errors='coerce').fillna(0)
+    return df
+
+try:
+    df_store_raw = load_store()
+    STORE_OK = True
+    _store_err = ''
+except Exception as e:
+    df_store_raw = pd.DataFrame()
+    STORE_OK = False
+    _store_err = str(e)
+
 with st.sidebar:
     st.title('BI Dashboard')
     st.markdown('---')
 
     halaman = st.radio(
         'HALAMAN',
-        ['Overview', 'Sales Analytics', 'Sentiment Analytics'],
+        ['Overview', 'Sales Analytics', 'Store Sales', 'Sentiment Analytics'],
         index=0,
     )
     st.markdown('---')
@@ -215,7 +241,7 @@ with st.sidebar:
             df_sales_raw['category'].isin(sel_cat) &
             df_sales_raw['quarter'].isin(sel_q) &
             df_sales_raw['listprice'].between(sel_price[0], sel_price[1])
-        ]
+            ]
     else:
         df_s = df_sales_raw
 
@@ -235,14 +261,37 @@ with st.sidebar:
             df_review_raw['sentiment_label'].isin(sel_sent) &
             df_review_raw['nama_produk'].isin(sel_prod) &
             df_review_raw['bintang'].between(star_range[0], star_range[1])
-        ]
+            ]
     else:
         df_r = df_review_raw
+
+    # ── ZONA: Filter Store Sales ──────────────────────────────
+    if halaman in ('Overview', 'Store Sales') and STORE_OK:
+        st.markdown('---')
+        st.markdown('**FILTER STORE SALES**')
+        sy_opts = sorted(df_store_raw['OrderYear'].dropna().unique().tolist())
+        sel_sy  = st.multiselect('Tahun (Store)', sy_opts, default=sy_opts)
+        sc_opts = sorted(df_store_raw['ProductCategory'].dropna().unique().tolist())
+        sel_sc  = st.multiselect('Kategori (Store)', sc_opts, default=sc_opts)
+        sq_opts = [1, 2, 3, 4]
+        sel_sq  = st.multiselect('Quarter (Store)', sq_opts, default=sq_opts, format_func=lambda x: f'Q{x}')
+        ter_opts = sorted(df_store_raw['TerritoryName'].dropna().unique().tolist())
+        sel_ter  = st.multiselect('Territory', ter_opts, default=ter_opts)
+        mask_st = (
+                df_store_raw['OrderYear'].isin(sel_sy) &
+                df_store_raw['ProductCategory'].isin(sel_sc) &
+                df_store_raw['OrderQuarter'].isin(sel_sq) &
+                df_store_raw['TerritoryName'].isin(sel_ter)
+        )
+        df_st = df_store_raw[mask_st]
+    else:
+        df_st = df_store_raw
 
 
 SUBTITLE = {
     'Overview':            'Ringkasan gabungan performa penjualan dan analisis sentimen pelanggan.',
     'Sales Analytics':     'Analisis transaksi penjualan online AdventureWorks — revenue, produk, dan pelanggan.',
+    'Store Sales':         'Analisis penjualan toko via salesperson — revenue, territory, dan performa salesperson.',
     'Sentiment Analytics': 'Analisis ulasan produk dari Twitter/X — distribusi sentimen dan rating.',
 }
 st.markdown(f"""
@@ -326,8 +375,8 @@ def render_sales(df, compact=False):
     with col4:
         rev_mo = df.groupby(['year','month'])['totaldue'].sum().reset_index()
         rev_mo['period'] = (
-            rev_mo['year'].astype(str) + '/'
-            + rev_mo['month'].astype(str).str.zfill(2)
+                rev_mo['year'].astype(str) + '/'
+                + rev_mo['month'].astype(str).str.zfill(2)
         )
         fig = px.line(
             rev_mo, x='period', y='totaldue',
@@ -585,18 +634,146 @@ def render_sentiment(df, compact=False):
     st.download_button('Download Data Review (CSV)', data=csv,
                        file_name='review_filtered.csv', mime='text/csv')
 
+
+# ══════════════════════════════════════════════════════════════
+# ZONA — Store Sales Analytics
+# ══════════════════════════════════════════════════════════════
+def render_store(df, compact=False):
+    if not STORE_OK:
+        st.error(f'Gagal memuat data store sales.\n\n**Path:** `{STORE_PATH}`\n\n**Error:** {_store_err}')
+        return
+    if df.empty:
+        st.warning('Tidak ada data sesuai filter.')
+        return
+
+    # KPI
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric('Total Transaksi', f'{df["SalesOrderDetailID"].nunique():,}')
+    c2.metric('Total Revenue',   f'${df["RevenueNet"].sum():,.0f}')
+    c3.metric('Total Orders',    f'{df["SalesOrderID"].nunique():,}')
+    c4.metric('Unit Terjual',    f'{int(df["OrderQty"].sum()):,}')
+    st.divider()
+
+    section_header('Revenue & Produk')
+    col1, col2 = st.columns(2)
+
+    with col1:
+        rev_year = df.groupby('OrderYear')['RevenueNet'].sum().reset_index()
+        fig = px.bar(
+            rev_year, x='OrderYear', y='RevenueNet',
+            color='OrderYear', color_discrete_sequence=PALETTE,
+            labels={'RevenueNet': 'Revenue ($)', 'OrderYear': 'Tahun'},
+            text_auto='.2s',
+        )
+        fig.update_layout(showlegend=False)
+        fig.update_traces(textfont=dict(color='#1e3a5f', size=12), textposition='outside')
+        render_chart(fig, 'Revenue per Tahun (Store)')
+
+    with col2:
+        top_prod = (df.groupby('ProductName')['OrderQty'].sum()
+                    .nlargest(10).reset_index())
+        top_prod['ProductName'] = top_prod['ProductName'].str[:28]
+        fig = px.bar(
+            top_prod, x='OrderQty', y='ProductName',
+            orientation='h', color='OrderQty',
+            color_continuous_scale=BLUE_SEQ,
+            labels={'OrderQty': 'Unit Terjual', 'ProductName': 'Produk'},
+        )
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'}, coloraxis_showscale=False)
+        fig.update_traces(text=top_prod['OrderQty'], textposition='inside',
+                          textfont=dict(color='white', size=11), insidetextanchor='middle')
+        render_chart(fig, 'Top 10 Produk Terlaris (Store)')
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        rev_cat = df.groupby('ProductCategory')['RevenueNet'].sum().reset_index()
+        fig = px.pie(rev_cat, values='RevenueNet', names='ProductCategory',
+                     color_discrete_sequence=PALETTE, hole=0.52)
+        fig.update_traces(textposition='outside', textinfo='percent+label',
+                          textfont=dict(color='#1e3a5f', size=12))
+        render_chart(fig, 'Revenue per Kategori (Store)')
+
+    with col4:
+        rev_mo = df.groupby(['OrderYear', 'OrderMonth'])['RevenueNet'].sum().reset_index()
+        rev_mo['period'] = (rev_mo['OrderYear'].astype(str) + '/'
+                            + rev_mo['OrderMonth'].astype(str).str.zfill(2))
+        rev_mo = rev_mo.sort_values('period')
+        fig = px.line(rev_mo, x='period', y='RevenueNet',
+                      markers=True, color_discrete_sequence=['#1d4ed8'],
+                      labels={'RevenueNet': 'Revenue ($)', 'period': 'Periode'})
+        fig.update_layout(xaxis_tickangle=45)
+        fig.update_traces(line=dict(width=2.5), marker=dict(size=7, color='#1d4ed8'))
+        render_chart(fig, 'Tren Revenue Bulanan (Store)')
+
+    if compact:
+        return
+
+    st.divider()
+    section_header('Performa Salesperson & Territory')
+    col5, col6 = st.columns(2)
+
+    with col5:
+        sp_rev = (df.groupby(['SK_Salesperson', 'TerritoryName'])['RevenueNet']
+                  .sum().reset_index().sort_values('RevenueNet', ascending=True))
+        sp_rev['Label'] = 'SP-' + sp_rev['SK_Salesperson'].astype(str) + ' (' + sp_rev['TerritoryName'].fillna('—') + ')'
+        fig = px.bar(
+            sp_rev, x='RevenueNet', y='Label',
+            orientation='h', color='TerritoryName',
+            color_discrete_sequence=PALETTE,
+            labels={'RevenueNet': 'Revenue ($)', 'Label': 'Salesperson'},
+        )
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'}, showlegend=False)
+        render_chart(fig, 'Revenue per Salesperson', height=360)
+
+    with col6:
+        ter_rev = (df.groupby('TerritoryName')['RevenueNet'].sum()
+                   .reset_index().sort_values('RevenueNet', ascending=False))
+        fig = px.bar(
+            ter_rev, x='TerritoryName', y='RevenueNet',
+            color='TerritoryName', color_discrete_sequence=PALETTE,
+            labels={'RevenueNet': 'Revenue ($)', 'TerritoryName': 'Territory'},
+            text_auto='.2s',
+        )
+        fig.update_layout(showlegend=False, xaxis_tickangle=30)
+        fig.update_traces(textfont=dict(color='#1e3a5f', size=11), textposition='outside')
+        render_chart(fig, 'Revenue per Territory')
+
+    st.divider()
+    section_header('Ranking Salesperson')
+    sp_tbl = (df.groupby(['SK_Salesperson', 'TerritoryName', 'TerritoryGroup'])
+              .agg(Revenue=('RevenueNet', 'sum'),
+                   Orders=('SalesOrderID', 'nunique'),
+                   Qty=('OrderQty', 'sum'))
+              .reset_index().sort_values('Revenue', ascending=False).reset_index(drop=True))
+    sp_tbl.index += 1
+    sp_tbl['Revenue'] = sp_tbl['Revenue'].map('${:,.0f}'.format)
+    st.dataframe(sp_tbl, use_container_width=True, hide_index=False)
+
+    st.divider()
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button('Download Data Store Sales (CSV)', data=csv,
+                       file_name='store_sales_filtered.csv', mime='text/csv')
+
 def render_overview():
     section_header('Ringkasan Bisnis')
     cols = st.columns(6)
 
     if SALES_OK and not df_s.empty:
-        cols[0].metric('Total Revenue',   f"${df_s['totaldue'].sum():,.0f}")
-        cols[1].metric('Total Transaksi', f"{len(df_s):,}")
-        cols[2].metric('Unit Terjual',    f"{df_s['orderqty'].sum():,}")
+        online_rev = df_s['totaldue'].sum()
     else:
-        cols[0].metric('Total Revenue',   '—')
-        cols[1].metric('Total Transaksi', '—')
-        cols[2].metric('Unit Terjual',    '—')
+        online_rev = 0
+    if STORE_OK and not df_st.empty:
+        store_rev = df_st['RevenueNet'].sum()
+    else:
+        store_rev = 0
+    total_rev = online_rev + store_rev
+    cols[0].metric('Total Revenue (Online)', f"${online_rev:,.0f}" if SALES_OK else '—')
+    cols[1].metric('Total Revenue (Store)',  f"${store_rev:,.0f}"  if STORE_OK else '—')
+    if SALES_OK and not df_s.empty:
+        cols[2].metric('Total Transaksi Online', f"{len(df_s):,}")
+    else:
+        cols[2].metric('Total Transaksi Online', '—')
 
     if REVIEW_OK and not df_r.empty:
         tot = len(df_r)
@@ -610,9 +787,11 @@ def render_overview():
         cols[5].metric('Rata-rata Bintang', '—')
 
     st.divider()
-    tab_sales, tab_review = st.tabs(['  Sales Analytics  ', '  Sentiment Analytics  '])
+    tab_sales, tab_store, tab_review = st.tabs(['  Sales Analytics  ', '  Store Sales  ', '  Sentiment Analytics  '])
     with tab_sales:
         render_sales(df_s, compact=True)
+    with tab_store:
+        render_store(df_st, compact=True)
     with tab_review:
         render_sentiment(df_r, compact=True)
 
@@ -622,6 +801,8 @@ def render_overview():
 # ══════════════════════════════════════════════════════════════
 if halaman == 'Sales Analytics':
     render_sales(df_s, compact=False)
+elif halaman == 'Store Sales':
+    render_store(df_st, compact=False)
 elif halaman == 'Sentiment Analytics':
     render_sentiment(df_r, compact=False)
 else:
