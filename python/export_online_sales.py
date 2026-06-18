@@ -8,7 +8,7 @@ conn = psycopg2.connect(
     host="localhost",
     database="adventureworks_local",
     user="postgres",
-    password="password="PASSWORD_POSTGRES"",
+    password="PASSWORD_POSTGRES",
     port="5432"
 )
 
