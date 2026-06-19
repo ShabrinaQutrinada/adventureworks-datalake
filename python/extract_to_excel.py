@@ -1,18 +1,3 @@
-"""
-extract_to_excel.py  —  ZONA | AdventureWorks Data Lakehouse
-Step 0 : Source Extraction
-
-Ambil data penjualan TOKO dari database AdventureWorks:
-  - Filter : OnlineOrderFlag = false/0  (penjualan toko via salesperson)
-  - Join   : SalesOrderHeader + SalesOrderDetail + Product +
-             ProductSubcategory + ProductCategory + SalesPerson + SalesTerritory
-  - Output : datalake/bronze/store_sales/store_sales_raw.xlsx
-
-Mendukung dua mode:
-  - Mode DUMP  : baca dari file .tar PostgreSQL dump (offline)
-  - Mode LIVE  : connect langsung ke PostgreSQL
-"""
-
 import sys
 import pandas as pd
 from pathlib import Path

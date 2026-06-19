@@ -1,20 +1,3 @@
-"""
-silver_excel.py  —  ZONA | AdventureWorks Data Lakehouse
-Layer : SILVER (Cleaned & Validated)
-
-Input : datalake/bronze/store_sales/store_sales_bronze.parquet
-Output: datalake/silver/store_sales/store_sales_silver.parquet
-        datalake/silver/store_sales/silver_quality_report.json
-
-Transformasi:
-  1. Cast tipe data yang benar (date, int, decimal)
-  2. Handle missing values
-  3. Hapus duplikat
-  4. Validasi bisnis
-  5. Normalisasi string
-  6. Tambah kolom turunan (OrderYear, OrderMonth, OrderQuarter, RevenueNet, LineTotal)
-"""
-
 import sys, json, pandas as pd
 from pathlib import Path
 from datetime import datetime

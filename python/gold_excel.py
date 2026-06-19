@@ -1,19 +1,3 @@
-"""
-gold_excel.py  —  ZONA | AdventureWorks Data Lakehouse
-Layer : GOLD — Data Warehouse Load
-
-Input : datalake/silver/store_sales/store_sales_silver.parquet
-Output: MySQL DW → Dim_Salesperson, Dim_Store*, Fact_StoreSales
-        datalake/gold/store_sales/ (parquet snapshot)
-
-*Dim_Store diisi dengan data territory sebagai proxy karena tabel
- sales.store kosong di dump ini (BusinessEntityID-based lookup).
-
-Tabel yang dibangun:
-  Dim_Salesperson — siapa yang jual
-  Fact_StoreSales — fakta transaksi penjualan toko
-"""
-
 import sys, json, pandas as pd
 from pathlib import Path
 from datetime import datetime

@@ -2,7 +2,7 @@
   "layer": "bronze",
   "source_file": "store_sales_raw.xlsx",
   "source_db": "AdventureWorks PostgreSQL (OnlineOrderFlag=0)",
-  "ingested_at": "2026-06-11T12:14:16.588963",
+  "ingested_at": "2026-06-19T07:17:57.776595",
   "total_rows": 60919,
   "total_columns": 36,
   "columns": [
@@ -43,5 +43,5 @@
     "_ingested_at",
     "_row_id"
   ],
-  "file_size_kb": 8527.74
+  "file_size_kb": 8528.4
 }

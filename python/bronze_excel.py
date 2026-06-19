@@ -1,17 +1,3 @@
-"""
-bronze_excel.py  —  ZONA | AdventureWorks Data Lakehouse
-Layer : BRONZE (Raw Ingestion)
-
-Input : datalake/bronze/store_sales/store_sales_raw.xlsx
-Output: datalake/bronze/store_sales/store_sales_bronze.parquet
-        datalake/bronze/store_sales/bronze_metadata.json
-
-Aturan bronze:
-  - TIDAK ADA transformasi nilai — simpan apa adanya
-  - Semua kolom dibaca sebagai string
-  - Tambah kolom audit: _source_file, _ingested_at, _row_id
-"""
-
 import sys, json, pandas as pd
 from pathlib import Path
 from datetime import datetime

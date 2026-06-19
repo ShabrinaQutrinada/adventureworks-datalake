@@ -1,6 +1,6 @@
 {
   "layer": "gold",
-  "loaded_at": "2026-06-11T12:14:22.902044",
+  "loaded_at": "2026-06-19T07:18:06.565049",
   "source": "AdventureWorks (OnlineOrderFlag=0) via Excel",
   "dim_salesperson_rows": 17,
   "fact_storesales_rows": 60919,
